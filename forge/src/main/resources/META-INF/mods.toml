@@ -1,29 +1,41 @@
 modLoader = "javafml"
 loaderVersion = "[45,)"
-#issueTrackerURL = ""
-license = "Insert License Here"
+license = "CC-BY-4.0 License"
+issueTrackerURL = "https://github.com/Tatou8/BendyGeckoCompat/issues"
 
 [[mods]]
-modId = "bendylib"
+modId = "bendygeckocompat"
 version = "${version}"
-displayName = "Bendy lib"
-authors = "KosmX"
+displayName = "BendyGeckoCompat"
+authors = "Tatou8"
 description = '''
-Bendy API ported to Forge
-But you should use Fabric or Quilt
+Compatibility addon bringing bending support to GeckoLib 3D armors with Bendy-Lib and Player Animator.
 '''
-#logoFile = ""
 
-[[dependencies.bendylib]]
+[[dependencies.bendygeckocompat]]
 modId = "forge"
 mandatory = true
 versionRange = "[45,)"
 ordering = "NONE"
 side = "CLIENT"
 
-[[dependencies.bendylib]]
+[[dependencies.bendygeckocompat]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.19.4,)"
+versionRange = "[1.19.4, 1.20.5)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.bendygeckocompat]]
+modId = "bendylib"
+mandatory = true
+versionRange = "[4.0.0,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.bendygeckocompat]]
+modId = "geckolib"
+mandatory = true
+versionRange = "[4.0.0,)"
 ordering = "NONE"
 side = "CLIENT"

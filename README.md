@@ -1,37 +1,32 @@
-# bendy-lib
-FabricMC library
+# BendyGeckoCompat
 
-setup with gradle:
+Minecraft compatibility addon bringing complete bending support to **GeckoLib 3D armors** for player animation mods (**Emotecraft**, **Player Animator**, **Mo'Bends**).
 
+## Features
+- Dynamic real-time mesh deformation and bending for GeckoLib armor cubes matching player animations.
+- Full support for arms, legs, torso, and boots.
+- Compatible with Minecraft 1.19.4, 1.20, and 1.20.1 on both **Fabric** and **Forge**.
+
+## Dependencies
+- **[bendy-lib](https://github.com/KosmX/bendy-lib)**
+- **[GeckoLib](https://github.com/bernie-g/geckolib)**
+
+## Setup (Gradle)
 ```groovy
-dependencies {
-    (...)
-    repositories {
-        mavenCentral()
-        (...)
+repositories {
+    maven {
+        url = "https://maven.pkg.github.com/Tatou8/BendyGeckoCompat"
     }
-    (...) 
-    modImplementation "io.github.kosmx:bendy-lib:${project.bendylib_version}"
-    include "io.github.kosmx:bendy-lib:${project.bendylib_version}"
-    //you can find the latest version in GitHub packages
+}
+
+dependencies {
+    modImplementation "fr.tatou8.bendygeckocompat:BendyGeckoCompat-fabric:1.0.0" // Fabric
+    // or
+    modImplementation "fr.tatou8.bendygeckocompat:BendyGeckoCompat-forge:1.0.0"  // Forge
 }
 ```
 
-designed to be able to swap and bend cuboids.
-
-The api provides a way to swap a cuboid with priorities, to be multi-mod compatible
-(bend like in Mo'bends)
-
-to swap, you have to create a class from MutableModelPart, and implement the methods.
-
-You don't have to use existing bendableCuboid objects, you can create your own, BUT it's highly recommend (it's a lot's of work to code a bendable stuff)
-
-The test mod (an older and modified version of [Emotecraft](https://github.com/kosmx/emotes))
-
-Sorry for this not finished documentation...
-You can find me on the Fabric discord server and on the Emotecraft discord server
-
-and an example image:D  
-![example](https://raw.githubusercontent.com/KosmX/bendy-lib/dev/example.png)  
-  
-The release branch contains the source of the latest release.
+## Credits
+- **Tatou8** (Author & Maintainer)
+- **KosmX** (Original bendy-lib & animation libraries)
+- **GeckoLib Team** (GeckoLib animation engine)

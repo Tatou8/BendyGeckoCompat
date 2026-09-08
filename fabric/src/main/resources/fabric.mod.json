@@ -1,29 +1,34 @@
 {
   "schemaVersion": 1,
-  "id": "bendy-lib",
+  "id": "bendygeckocompat",
   "version": "${version}",
-  "name": "Bendy api",
-  "description": "Bending model parts",
+  "name": "BendyGeckoCompat",
+  "description": "Compatibility addon bringing bending support to GeckoLib 3D armors with Bendy-Lib and Player Animator.",
   "authors": [
+    "Tatou8"
+  ],
+  "contributors": [
     "KosmX"
   ],
-  "contributors": [],
   "contact": {
-    "homepage": "https://github.com/KosmX/bendy-lib",
-    "sources": "https://github.com/KosmX/bendy-lib"
+    "homepage": "https://github.com/Tatou8/BendyGeckoCompat",
+    "sources": "https://github.com/Tatou8/BendyGeckoCompat.git"
   },
   "license": "CC-BY-4.0 License",
   "environment": "client",
   "entrypoints": {
     "client": [
-      "io.github.kosmx.bendylib.fabric.Init"
+      "fr.tatou8.bendygeckocompat.fabric.Init"
     ]
   },
   "mixins": [
-    "bendylib.mixins.json"
+    "bendygeckocompat.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.14.14"
+    "fabricloader": ">=0.14.14",
+    "minecraft": ">=1.19.4 <=1.20.4",
+    "bendy-lib": ">=4.0.0",
+    "geckolib": ">=4.0.0"
   },
   "custom": {
     "modmenu": {

@@ -7,10 +7,6 @@ architectury {
     fabric()
 }
 
-loom {
-    accessWidenerPath = project(":common").loom.accessWidenerPath
-}
-
 configurations {
     common
     shadowCommon // Don't use shadow from the shadow plugin because we don't want IDEA to index this.
@@ -27,20 +23,19 @@ repositories {
 
 dependencies {
     modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
-    //modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_version}"
-
+    modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_version}"
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) { transitive false }
 
-    modLocalRuntime "com.terraformersmc:modmenu:4.0.6"
-    modLocalRuntime "maven.modrinth:skinswapper:3.12"
+    modLocalRuntime "com.terraformersmc:modmenu:7.2.2"
 
-    modCompileOnly modLocalRuntime("maven.modrinth:3dskinlayers:1.5.2-1.19.3-fabric")
+    modCompileOnly modLocalRuntime("io.github.kosmx.bendy-lib:bendy-lib-fabric:4.0.0")
+    modCompileOnly modLocalRuntime("software.bernie.geckolib:geckolib-fabric-1.20.1:4.4.4")
+    modLocalRuntime "com.eliotlash.mclib:mclib:20"
 
-    modLocalRuntime "net.fabricmc.fabric-api:fabric-api:0.58.5+1.19.1"
-    modLocalRuntime "dev.kosmx.player-anim:player-animation-lib-fabric:0.4.0-test1"
-    modLocalRuntime "maven.modrinth:emotecraft:2.2.5-MC1.19.2-fabric"
+    modLocalRuntime "dev.kosmx.player-anim:player-animation-lib-fabric:1.0.2-rc1+1.20"
+    modLocalRuntime "maven.modrinth:emotecraft:2.2.7-b.build.50+1.20.1-fabric"
 }
 
 processResources {
@@ -59,7 +54,6 @@ shadowJar {
 }
 
 remapJar {
-    injectAccessWidener = true
     inputFile.set shadowJar.archiveFile
     dependsOn shadowJar
     archiveClassifier.set(null)
@@ -107,7 +101,7 @@ publishing {
         if(System.getenv("GITHUB_ACTOR") != null) {
             maven {
                 name = "GitHubPackages"
-                url = "https://maven.pkg.github.com/kosmx/bendy-lib"
+                url = "https://maven.pkg.github.com/Tatou8/BendyGeckoCompat"
                 credentials {
                     username = System.getenv("GITHUB_ACTOR")
                     password = System.getenv("GITHUB_TOKEN")

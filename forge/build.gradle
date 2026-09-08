@@ -8,13 +8,8 @@ architectury {
 }
 
 loom {
-    accessWidenerPath = project(":common").loom.accessWidenerPath
-
     forge {
-        mixinConfig "bendylib.mixins.json"
-
-        convertAccessWideners = true
-        extraAccessWideners.add loom.accessWidenerPath.get().asFile.name
+        mixinConfig "bendygeckocompat.mixins.json"
     }
 }
 
@@ -26,14 +21,29 @@ configurations {
     developmentForge.extendsFrom common
 }
 
+repositories {
+    maven { url "https://maven.kosmx.dev/" }
+}
+
 dependencies {
     forge "net.minecraftforge:forge:${rootProject.forge_version}"
-
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionForge")) { transitive = false }
 
-    modCompileOnly modLocalRuntime("maven.modrinth:3dskinlayers:1.5.2-1.19.3-forge")
+    modCompileOnly modLocalRuntime("io.github.kosmx.bendy-lib:bendy-lib-forge:4.0.0")
+    modCompileOnly modLocalRuntime("software.bernie.geckolib:geckolib-forge-1.20.1:4.4.4")
+    forgeRuntimeLibrary "com.eliotlash.mclib:mclib:20"
+    implementation "com.eliotlash.mclib:mclib:20"
+
+    modLocalRuntime "dev.kosmx.player-anim:player-animation-lib-forge:1.0.2-rc1+1.20"
+    modLocalRuntime "maven.modrinth:emotecraft:2.2.7-b.build.50+1.20.1-forge"
+
+    modLocalRuntime "maven.modrinth:curios:5.14.1+1.20.1"
+    modLocalRuntime "maven.modrinth:smartbrainlib:1.15"
+    modLocalRuntime "maven.modrinth:dungeons-and-combat:1.2.2"
+    modLocalRuntime "maven.modrinth:survival-instinct:1.0.2"
+    modLocalRuntime "maven.modrinth:arc-raiders:1.1.0"
 }
 
 processResources {
@@ -100,7 +110,7 @@ publishing {
         if(System.getenv("GITHUB_ACTOR") != null) {
             maven {
                 name = "GitHubPackages"
-                url = "https://maven.pkg.github.com/kosmx/bendy-lib"
+                url = "https://maven.pkg.github.com/Tatou8/BendyGeckoCompat"
                 credentials {
                     username = System.getenv("GITHUB_ACTOR")
                     password = System.getenv("GITHUB_TOKEN")

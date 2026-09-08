@@ -3,16 +3,13 @@ architectury {
     common(rootProject.enabled_platforms.split(","))
 }
 
-loom {
-    accessWidenerPath = file("src/main/resources/bendylib.accesswidener")
-}
-
 dependencies {
     // We depend on fabric loader here to use the fabric @Environment annotations and get the mixin dependencies
     // Do NOT use other classes from fabric loader
     modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
 
-    modCompileOnly("maven.modrinth:3dskinlayers:1.5.2-1.19.3-fabric") //TODO
+    modCompileOnly("io.github.kosmx.bendy-lib:bendy-lib:4.0.0")
+    modCompileOnly("software.bernie.geckolib:geckolib-fabric-1.20.1:4.4.4")
 }
 
 sourceSets {
@@ -49,7 +46,7 @@ publishing {
         if(System.getenv("GITHUB_ACTOR") != null) {
             maven {
                 name = "GitHubPackages"
-                url = "https://maven.pkg.github.com/kosmx/bendy-lib"
+                url = "https://maven.pkg.github.com/Tatou8/BendyGeckoCompat"
                 credentials {
                     username = System.getenv("GITHUB_ACTOR")
                     password = System.getenv("GITHUB_TOKEN")
