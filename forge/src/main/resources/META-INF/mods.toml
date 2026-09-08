@@ -7,6 +7,8 @@ issueTrackerURL = "https://github.com/Tatou8/BendyGeckoCompat/issues"
 modId = "bendygeckocompat"
 version = "${version}"
 displayName = "BendyGeckoCompat"
+logoFile = "logo.png"
+displayTest = "IGNORE_ALL_VERSION"
 authors = "Tatou8"
 description = '''
 Compatibility addon bringing bending support to GeckoLib 3D armors with Bendy-Lib and Player Animator.

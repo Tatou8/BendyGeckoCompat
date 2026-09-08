@@ -3,6 +3,7 @@
   "id": "bendygeckocompat",
   "version": "${version}",
   "name": "BendyGeckoCompat",
+  "icon": "assets/bendygeckocompat/icon.png",
   "description": "Compatibility addon bringing bending support to GeckoLib 3D armors with Bendy-Lib and Player Animator.",
   "authors": [
     "Tatou8"
