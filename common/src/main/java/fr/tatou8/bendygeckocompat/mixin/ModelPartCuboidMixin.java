@@ -24,6 +24,27 @@ public abstract class ModelPartCuboidMixin implements IBendableCuboidRenderer {
     @Final
     private ModelPart.Quad[] sides;
 
+    @Shadow
+    @Final
+    public float minX;
+
+    @Shadow
+    @Final
+    public float maxX;
+
+    @Shadow
+    @Final
+    public float minZ;
+
+    @Shadow
+    @Final
+    public float maxZ;
+
+    @Override public float bendy$getMinX() { return this.minX; }
+    @Override public float bendy$getMaxX() { return this.maxX; }
+    @Override public float bendy$getMinZ() { return this.minZ; }
+    @Override public float bendy$getMaxZ() { return this.maxZ; }
+
     @Override
     public void bendy$renderBent(Matrix4f topPose, Matrix3f topNormal, Matrix4f childRelMatrix,
                                   LimbType limb, BendableCuboid bendable, Consumer<IPosWithOrigin> transform,

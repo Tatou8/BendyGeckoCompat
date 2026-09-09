@@ -14,4 +14,9 @@ public interface IBendableCuboidRenderer {
                           LimbType limb, BendableCuboid bendable, Consumer<IPosWithOrigin> transform,
                           VertexConsumer buffer, int light, int overlay,
                           float red, float green, float blue, float alpha);
+
+    float bendy$getMinX();
+    float bendy$getMaxX();
+    float bendy$getMinZ();
+    float bendy$getMaxZ();
 }

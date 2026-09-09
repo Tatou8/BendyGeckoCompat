@@ -164,6 +164,119 @@ public class CustomModelPartCompat {
         return null;
     }
 
+    public static class DynamicLimbOffsets {
+        public final float lateralOffset;
+        public final float forwardOffset;
+
+        public DynamicLimbOffsets(float lateralOffset, float forwardOffset) {
+            this.lateralOffset = lateralOffset;
+            this.forwardOffset = forwardOffset;
+        }
+    }
+
+    public static final DynamicLimbOffsets ZERO_OFFSETS = new DynamicLimbOffsets(0.0f, 0.0f);
+    private static final Map<ModelPart, DynamicLimbOffsets> MODEL_PART_OFFSETS_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static DynamicLimbOffsets getDynamicOffsets(ModelPart rootPart, LimbType limb) {
+        if (rootPart == null || limb == null) {
+            return ZERO_OFFSETS;
+        }
+        return MODEL_PART_OFFSETS_CACHE.computeIfAbsent(rootPart, part -> calculateModelPartOffsets(part, limb));
+    }
+
+    private static class PartEntry {
+        final ModelPart part;
+        final float offsetX;
+        final float offsetZ;
+
+        PartEntry(ModelPart part, float offsetX, float offsetZ) {
+            this.part = part;
+            this.offsetX = offsetX;
+            this.offsetZ = offsetZ;
+        }
+    }
+
+    private static void collectParts(ModelPart part, float curX, float curZ, List<PartEntry> out) {
+        if (part == null) return;
+        out.add(new PartEntry(part, curX, curZ));
+        Map<String, ModelPart> children = ModelPartAccessor.getChildren(part);
+        if (children != null) {
+            for (ModelPart child : children.values()) {
+                collectParts(child, curX + child.pivotX, curZ + child.pivotZ, out);
+            }
+        }
+    }
+
+    private static DynamicLimbOffsets calculateModelPartOffsets(ModelPart rootPart, LimbType limb) {
+        if (limb != LimbType.RIGHT_ARM && limb != LimbType.LEFT_ARM) {
+            return ZERO_OFFSETS;
+        }
+
+        float minX = Float.POSITIVE_INFINITY;
+        float maxX = Float.NEGATIVE_INFINITY;
+        float minZ = Float.POSITIVE_INFINITY;
+        float maxZ = Float.NEGATIVE_INFINITY;
+        int cuboidCount = 0;
+
+        List<PartEntry> allParts = new ArrayList<>();
+        collectParts(rootPart, 0.0f, 0.0f, allParts);
+
+        for (PartEntry entry : allParts) {
+            List<ModelPart.Cuboid> cuboids = ModelPartAccessor.getCuboids(entry.part);
+            if (cuboids == null) continue;
+            for (ModelPart.Cuboid cuboid : cuboids) {
+                if (cuboid instanceof IBendableCuboidRenderer bRenderer) {
+                    float cx0 = bRenderer.bendy$getMinX() + entry.offsetX;
+                    float cx1 = bRenderer.bendy$getMaxX() + entry.offsetX;
+                    float cz0 = bRenderer.bendy$getMinZ() + entry.offsetZ;
+                    float cz1 = bRenderer.bendy$getMaxZ() + entry.offsetZ;
+
+                    if (cx0 < minX) minX = cx0;
+                    if (cx1 > maxX) maxX = cx1;
+                    if (cz0 < minZ) minZ = cz0;
+                    if (cz1 > maxZ) maxZ = cz1;
+                    cuboidCount++;
+                }
+            }
+        }
+
+        if (cuboidCount == 0) {
+            return ZERO_OFFSETS;
+        }
+
+        float lateral = 0.0f;
+        float forward = 0.0f;
+
+        if (limb == LimbType.RIGHT_ARM) {
+            // Vanilla right arm cuboid local maxX is 1.0f. Standard armor tolerance is 1.5f.
+            if (maxX > 1.5f) {
+                lateral = maxX - 1.5f;
+            }
+            // Vanilla right arm cuboid local minZ is -2.0f. Standard armor tolerance is -2.5f.
+            if (minZ < -2.5f) {
+                forward = -((-2.5f) - minZ);
+            }
+        } else if (limb == LimbType.LEFT_ARM) {
+            // Vanilla left arm cuboid local minX is -1.0f. Standard armor tolerance is -1.5f.
+            if (minX < -1.5f) {
+                lateral = (-1.5f) - minX;
+            }
+            if (minZ < -2.5f) {
+                forward = -((-2.5f) - minZ);
+            }
+        }
+
+        // Deadband to ensure standard models have strictly 0.0f
+        if (lateral < 0.2f) lateral = 0.0f;
+        if (Math.abs(forward) < 0.2f) forward = 0.0f;
+
+        // Strictly clamp to prevent any drift
+        lateral = Math.min(1.75f, Math.max(0.0f, lateral));
+        forward = Math.min(0.0f, Math.max(-1.75f, forward));
+
+        return new DynamicLimbOffsets(lateral, forward);
+    }
+
     /**
      * Renders a ModelPart hierarchy with dynamic bendy deformation.
      */
@@ -184,7 +297,17 @@ public class CustomModelPartCompat {
             return;
         }
 
+        DynamicLimbOffsets offsets = getDynamicOffsets(rootPart, limb);
+        float bendWeight = Math.min(1.0f, Math.abs(bendable.getBend()) * 1.5f);
+        float lateral = offsets.lateralOffset * bendWeight;
+        float forward = offsets.forwardOffset * bendWeight;
+
         matrices.push();
+        if (limb == LimbType.RIGHT_ARM) {
+            matrices.translate(-lateral / 16.0f, 0, -forward / 16.0f);
+        } else if (limb == LimbType.LEFT_ARM) {
+            matrices.translate(lateral / 16.0f, 0, -forward / 16.0f);
+        }
         rootPart.rotate(matrices);
 
         Matrix4f topPose = new Matrix4f(matrices.peek().getPositionMatrix());
