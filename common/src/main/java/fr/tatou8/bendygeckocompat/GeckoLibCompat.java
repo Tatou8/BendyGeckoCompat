@@ -34,7 +34,7 @@ import java.util.function.Consumer;
 
 public class GeckoLibCompat {
 
-    public static boolean DEBUG = true;
+    public static boolean DEBUG = false;
     private static Logger LOGGER = null;
     private static long lastDebugLogTime = 0;
     private static long loggingActiveUntil = 0;
@@ -244,7 +244,63 @@ public class GeckoLibCompat {
     }
 
     public static void applyTorsoBendToArmor(GeoArmorRenderer<?> renderer, BipedEntityModel<?> baseModel) {
-        // Base transformations are handled directly by GeckoLib's applyBaseTransformations.
+        synchronizeLimbPivots(renderer);
+    }
+
+    /**
+     * Synchronizes armor limb pivots with vanilla Minecraft player skeleton pivots.
+     * Prevents rotation desynchronization when armors have non-standard pivots in their geo models.
+     */
+    public static void synchronizeLimbPivots(GeoArmorRenderer<?> renderer) {
+        if (renderer == null) return;
+
+        GeoBone rightArm = renderer.getRightArmBone();
+        if (rightArm != null) {
+            if (Math.abs(rightArm.getPivotX() - 5.0f) > 0.01f) rightArm.setPivotX(5.0f);
+            if (rightArm.getParent() != null && Math.abs(rightArm.getParent().getPivotX() - 5.0f) > 0.01f) {
+                rightArm.getParent().setPivotX(5.0f);
+            }
+        }
+
+        GeoBone leftArm = renderer.getLeftArmBone();
+        if (leftArm != null) {
+            if (Math.abs(leftArm.getPivotX() - (-5.0f)) > 0.01f) leftArm.setPivotX(-5.0f);
+            if (leftArm.getParent() != null && Math.abs(leftArm.getParent().getPivotX() - (-5.0f)) > 0.01f) {
+                leftArm.getParent().setPivotX(-5.0f);
+            }
+        }
+
+        GeoBone rightLeg = renderer.getRightLegBone();
+        if (rightLeg != null) {
+            if (Math.abs(rightLeg.getPivotX() - 1.9f) > 0.01f) rightLeg.setPivotX(1.9f);
+            if (rightLeg.getParent() != null && Math.abs(rightLeg.getParent().getPivotX() - 1.9f) > 0.01f) {
+                rightLeg.getParent().setPivotX(1.9f);
+            }
+        }
+
+        GeoBone leftLeg = renderer.getLeftLegBone();
+        if (leftLeg != null) {
+            if (Math.abs(leftLeg.getPivotX() - (-1.9f)) > 0.01f) leftLeg.setPivotX(-1.9f);
+            if (leftLeg.getParent() != null && Math.abs(leftLeg.getParent().getPivotX() - (-1.9f)) > 0.01f) {
+                leftLeg.getParent().setPivotX(-1.9f);
+            }
+        }
+
+        GeoBone rightBoot = renderer.getRightBootBone();
+        if (rightBoot != null) {
+            if (Math.abs(rightBoot.getPivotX() - 1.9f) > 0.01f) rightBoot.setPivotX(1.9f);
+            if (rightBoot.getParent() != null && Math.abs(rightBoot.getParent().getPivotX() - 1.9f) > 0.01f) {
+                rightBoot.getParent().setPivotX(1.9f);
+            }
+        }
+
+        GeoBone leftBoot = renderer.getLeftBootBone();
+        if (leftBoot != null) {
+            if (Math.abs(leftBoot.getPivotX() - (-1.9f)) > 0.01f) leftBoot.setPivotX(-1.9f);
+            if (leftBoot.getParent() != null && Math.abs(leftBoot.getParent().getPivotX() - (-1.9f)) > 0.01f) {
+                leftBoot.getParent().setPivotX(-1.9f);
+            }
+        }
     }
 
     /**
@@ -309,6 +365,44 @@ public class GeckoLibCompat {
     }
 
     /**
+     * Checks if a bone represents a boot limb (or any child bone of a boot, like toes/shoes).
+     */
+    public static boolean isBootLimb(GeoArmorRenderer<?> renderer, GeoBone bone) {
+        if (renderer == null || bone == null) {
+            return false;
+        }
+        GeoBone current = bone;
+        while (current != null) {
+            if (current == renderer.getRightBootBone() || current == renderer.getLeftBootBone()) {
+                return true;
+            }
+            if (isMatching(current.getName(), "boot") || isMatching(current.getName(), "shoe") || isMatching(current.getName(), "toe")) {
+                return true;
+            }
+            current = current.getParent();
+        }
+        return false;
+    }
+
+    /**
+     * Checks if a bone is the highest ancestor among boot limbs.
+     * Prevents applying knee rotation multiple times to nested child bones.
+     */
+    public static boolean isTopLevelBootLimb(GeoArmorRenderer<?> renderer, GeoBone bone) {
+        if (!isBootLimb(renderer, bone)) {
+            return false;
+        }
+        GeoBone parent = bone.getParent();
+        while (parent != null) {
+            if (isBootLimb(renderer, parent)) {
+                return false;
+            }
+            parent = parent.getParent();
+        }
+        return true;
+    }
+
+    /**
      * Identifies the limb type for a given GeoBone, searching ancestors if necessary.
      */
     public static LimbType getLimbType(GeoArmorRenderer<?> renderer, GeoBone bone) {
@@ -324,10 +418,10 @@ public class GeckoLibCompat {
             if (current == renderer.getLeftArmBone() || isMatching(current.getName(), "leftarm")) {
                 return LimbType.LEFT_ARM;
             }
-            if (current == renderer.getRightLegBone() || current == renderer.getRightBootBone() || isMatching(current.getName(), "rightleg") || isMatching(current.getName(), "rightboot")) {
+            if (current == renderer.getRightLegBone() || current == renderer.getRightBootBone() || isMatching(current.getName(), "rightleg") || isMatching(current.getName(), "rightboot") || isMatching(current.getName(), "rightshoe")) {
                 return LimbType.RIGHT_LEG;
             }
-            if (current == renderer.getLeftLegBone() || current == renderer.getLeftBootBone() || isMatching(current.getName(), "leftleg") || isMatching(current.getName(), "leftboot")) {
+            if (current == renderer.getLeftLegBone() || current == renderer.getLeftBootBone() || isMatching(current.getName(), "leftleg") || isMatching(current.getName(), "leftboot") || isMatching(current.getName(), "leftshoe")) {
                 return LimbType.LEFT_LEG;
             }
             if (current == renderer.getBodyBone() || isMatching(current.getName(), "body") || isMatching(current.getName(), "torso") || isMatching(current.getName(), "chest")) {
@@ -379,21 +473,43 @@ public class GeckoLibCompat {
     public static class DynamicLimbOffsets {
         public final float lateralOffset;
         public final float forwardOffset;
+        public final boolean isSlim;
 
-        public DynamicLimbOffsets(float lateralOffset, float forwardOffset) {
+        public DynamicLimbOffsets(float lateralOffset, float forwardOffset, boolean isSlim) {
             this.lateralOffset = lateralOffset;
             this.forwardOffset = forwardOffset;
+            this.isSlim = isSlim;
+        }
+
+        public DynamicLimbOffsets(float lateralOffset, float forwardOffset) {
+            this(lateralOffset, forwardOffset, false);
         }
     }
 
-    public static final DynamicLimbOffsets ZERO_OFFSETS = new DynamicLimbOffsets(0.0f, 0.0f);
+    public static final DynamicLimbOffsets ZERO_OFFSETS = new DynamicLimbOffsets(0.0f, 0.0f, false);
     private static final Map<GeoBone, DynamicLimbOffsets> GECKO_OFFSETS_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
-    public static DynamicLimbOffsets getDynamicOffsets(GeoBone top, LimbType limb) {
-        if (top == null || limb == null) {
+    public static DynamicLimbOffsets getDynamicOffsets(GeoArmorRenderer<?> renderer, GeoBone top, LimbType limb) {
+        GeoBone targetBone = top;
+        if (renderer != null) {
+            if (limb == LimbType.RIGHT_LEG && renderer.getRightLegBone() != null) {
+                targetBone = renderer.getRightLegBone();
+            } else if (limb == LimbType.LEFT_LEG && renderer.getLeftLegBone() != null) {
+                targetBone = renderer.getLeftLegBone();
+            } else if (limb == LimbType.RIGHT_ARM && renderer.getRightArmBone() != null) {
+                targetBone = renderer.getRightArmBone();
+            } else if (limb == LimbType.LEFT_ARM && renderer.getLeftArmBone() != null) {
+                targetBone = renderer.getLeftArmBone();
+            }
+        }
+        if (targetBone == null || limb == null) {
             return ZERO_OFFSETS;
         }
-        return GECKO_OFFSETS_CACHE.computeIfAbsent(top, bone -> calculateGeckoLimbOffsets(bone, limb));
+        return GECKO_OFFSETS_CACHE.computeIfAbsent(targetBone, bone -> calculateGeckoLimbOffsets(bone, limb));
+    }
+
+    public static DynamicLimbOffsets getDynamicOffsets(GeoBone top, LimbType limb) {
+        return getDynamicOffsets(null, top, limb);
     }
 
     private static void collectBones(GeoBone root, List<GeoBone> out) {
@@ -405,7 +521,8 @@ public class GeckoLibCompat {
     }
 
     private static DynamicLimbOffsets calculateGeckoLimbOffsets(GeoBone top, LimbType limb) {
-        if (limb != LimbType.RIGHT_ARM && limb != LimbType.LEFT_ARM) {
+        if (limb != LimbType.RIGHT_ARM && limb != LimbType.LEFT_ARM
+                && limb != LimbType.RIGHT_LEG && limb != LimbType.LEFT_LEG) {
             return ZERO_OFFSETS;
         }
 
@@ -445,53 +562,92 @@ public class GeckoLibCompat {
 
         float lateral = 0.0f;
         float forward = 0.0f;
+        float limbWidth = maxX - minX;
+        float centerX = (minX + maxX) / 2.0f;
+        float centerZ = (minZ + maxZ) / 2.0f;
+        boolean isSlim = (limbWidth < 4.3f);
 
         if (limb == LimbType.RIGHT_ARM) {
-            // In GeckoLib's BakedGeoModel, right arm pivot is at +5.0f (negated from json -5.0f).
-            // Normal arm cube inner edge is +3.5f (with standard 0.5f armor thickness).
-            if (minX < 3.5f) {
-                float encroachment = 3.5f - minX;
-                if (encroachment > 0.1f) {
-                    lateral += encroachment;
-                }
+            // Synchronize shoulder pivot to vanilla (+5.0f in GeckoLib)
+            if (Math.abs(top.getPivotX() - 5.0f) > 0.01f) {
+                top.setPivotX(5.0f);
             }
-            float pivotInwardDelta = 5.0f - top.getPivotX();
-            if (pivotInwardDelta > 0.1f) {
-                lateral += pivotInwardDelta;
+            if (top.getParent() != null && Math.abs(top.getParent().getPivotX() - 5.0f) > 0.01f) {
+                top.getParent().setPivotX(5.0f);
             }
 
-            // Standard right arm front edge is -2.0f, with standard 0.5f thickness = -2.5f.
-            if (minZ < -2.5f) {
-                float frontExcess = (-2.5f) - minZ;
-                if (frontExcess > 0.1f) {
-                    forward -= frontExcess;
-                }
+            // Normal right arm center in GeckoLib space is +6.0f (X in [4.0, 8.0]).
+            // Only add excess if the sleeve is positioned further outward than 6.0f
+            if (centerX > 6.05f) {
+                float centerExcess = centerX - 6.0f;
+                lateral += centerExcess;
             }
-            if (top.getPivotZ() < -0.1f) {
-                forward += top.getPivotZ();
+
+            if (Math.abs(centerZ) > 0.25f) {
+                forward = centerZ;
             }
         } else if (limb == LimbType.LEFT_ARM) {
-            // In GeckoLib's BakedGeoModel, left arm pivot is at -5.0f (negated from json +5.0f).
-            // Normal arm cube inner edge is -3.5f (with standard 0.5f armor thickness).
-            if (maxX > -3.5f) {
-                float encroachment = maxX - (-3.5f);
-                if (encroachment > 0.1f) {
-                    lateral += encroachment;
-                }
+            // Synchronize shoulder pivot to vanilla (-5.0f in GeckoLib)
+            if (Math.abs(top.getPivotX() - (-5.0f)) > 0.01f) {
+                top.setPivotX(-5.0f);
             }
-            float pivotInwardDelta = top.getPivotX() - (-5.0f);
-            if (pivotInwardDelta > 0.1f) {
-                lateral += pivotInwardDelta;
+            if (top.getParent() != null && Math.abs(top.getParent().getPivotX() - (-5.0f)) > 0.01f) {
+                top.getParent().setPivotX(-5.0f);
             }
 
-            if (minZ < -2.5f) {
-                float frontExcess = (-2.5f) - minZ;
-                if (frontExcess > 0.1f) {
-                    forward -= frontExcess;
-                }
+            // Normal left arm center in GeckoLib space is -6.0f (X in [-8.0, -4.0]).
+            // Only add excess if the sleeve is positioned further outward than -6.0f
+            if (centerX < -6.05f) {
+                float centerExcess = (-6.0f) - centerX;
+                lateral += centerExcess;
             }
-            if (top.getPivotZ() < -0.1f) {
-                forward += top.getPivotZ();
+
+            if (Math.abs(centerZ) > 0.25f) {
+                forward = centerZ;
+            }
+        } else if (limb == LimbType.RIGHT_LEG) {
+            // Synchronize hip pivot to vanilla (+1.9f in GeckoLib)
+            if (Math.abs(top.getPivotX() - 1.9f) > 0.01f) {
+                top.setPivotX(1.9f);
+            }
+            if (top.getParent() != null && Math.abs(top.getParent().getPivotX() - 1.9f) > 0.01f) {
+                top.getParent().setPivotX(1.9f);
+            }
+
+            // Normal right leg center in GeckoLib space is +2.0f, inner edge is 0.0f.
+            // If the model center is shifted outward (centerX > 2.05f) or inner edge leaves a crotch gap (minX > 0.1f):
+            if (centerX > 2.05f) {
+                float centerExcess = centerX - 2.0f;
+                lateral += centerExcess;
+            }
+            if (minX > 0.1f) {
+                lateral += minX + 0.1f;
+            }
+
+            if (Math.abs(centerZ) > 0.25f) {
+                forward = centerZ;
+            }
+        } else if (limb == LimbType.LEFT_LEG) {
+            // Synchronize hip pivot to vanilla (-1.9f in GeckoLib)
+            if (Math.abs(top.getPivotX() - (-1.9f)) > 0.01f) {
+                top.setPivotX(-1.9f);
+            }
+            if (top.getParent() != null && Math.abs(top.getParent().getPivotX() - (-1.9f)) > 0.01f) {
+                top.getParent().setPivotX(-1.9f);
+            }
+
+            // Normal left leg center in GeckoLib space is -2.0f, inner edge is 0.0f.
+            // If the model center is shifted outward (centerX < -2.05f) or inner edge leaves a crotch gap (maxX < -0.1f):
+            if (centerX < -2.05f) {
+                float centerExcess = (-2.0f) - centerX;
+                lateral += centerExcess;
+            }
+            if (maxX < -0.1f) {
+                lateral += (-maxX) + 0.1f;
+            }
+
+            if (Math.abs(centerZ) > 0.25f) {
+                forward = centerZ;
             }
         }
 
@@ -501,9 +657,9 @@ public class GeckoLibCompat {
 
         // Strictly clamp to prevent any drift
         lateral = Math.min(1.75f, Math.max(0.0f, lateral));
-        forward = Math.min(0.0f, Math.max(-1.75f, forward));
+        forward = Math.min(1.75f, Math.max(-1.75f, forward));
 
-        return new DynamicLimbOffsets(lateral, forward);
+        return new DynamicLimbOffsets(lateral, forward, isSlim);
     }
 
     /**
@@ -515,15 +671,14 @@ public class GeckoLibCompat {
         GeoBone top = getTopLimbBone(renderer, bone);
         boolean isTop = (top == null || bone == top);
 
-        DynamicLimbOffsets offsets = getDynamicOffsets(top, limb);
-        float bendWeight = Math.min(1.0f, Math.abs(bendable.getBend()) * 1.5f);
-        float lateral = offsets.lateralOffset * bendWeight;
-        float forward = offsets.forwardOffset * bendWeight;
+        DynamicLimbOffsets offsets = getDynamicOffsets(renderer, top, limb);
+        float lateral = offsets.lateralOffset;
+        float forward = offsets.forwardOffset;
 
         Matrix4f topPose = new Matrix4f(matrices.peek().getPositionMatrix());
-        if (limb == LimbType.RIGHT_ARM) {
+        if (limb == LimbType.RIGHT_ARM || limb == LimbType.RIGHT_LEG) {
             topPose.translate(-lateral / 16.0f, 0, -forward / 16.0f);
-        } else if (limb == LimbType.LEFT_ARM) {
+        } else if (limb == LimbType.LEFT_ARM || limb == LimbType.LEFT_LEG) {
             topPose.translate(lateral / 16.0f, 0, -forward / 16.0f);
         }
 
@@ -558,13 +713,14 @@ public class GeckoLibCompat {
                 : getTopLimbNormalMatrix(limb, matrices.peek().getNormalMatrix());
 
         for (GeoCube cube : bone.getCubes()) {
-            renderBendableCube(cube, bone, top, limb, transform, transformMatrix, bendable, bonePoseState, boneNormalState, buffer, packedLight, packedOverlay, red, green, blue, alpha);
+            renderBendableCube(cube, bone, top, limb, transform, transformMatrix, bendable, bonePoseState, boneNormalState, buffer, packedLight, packedOverlay, red, green, blue, alpha, offsets);
         }
     }
 
     private static void renderBendableCube(GeoCube cube, GeoBone bone, GeoBone top, LimbType limb, Consumer<IPosWithOrigin> transform, Matrix4f transformMatrix, BendableCuboid bendable,
                                            Matrix4f bonePoseState, Matrix3f boneNormalState, VertexConsumer buffer,
-                                           int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
+                                           int packedLight, int packedOverlay, float red, float green, float blue, float alpha,
+                                           DynamicLimbOffsets offsets) {
         Quaternionf qCube = new Quaternionf()
                 .rotationXYZ(0, 0, (float) cube.rotation().z)
                 .rotateY((float) cube.rotation().y)
@@ -613,7 +769,7 @@ public class GeckoLibCompat {
                 renderBentQuad(pos0, u0, texV0, pos1, u1, texV1, pos2, u2, texV2, pos3, u3, texV3,
                         cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb,
                         transform, transformMatrix, bendable, bonePoseState, boneNormalState, buffer, packedLight, packedOverlay,
-                        red, green, blue, alpha, cube, quad);
+                        red, green, blue, alpha, cube, quad, offsets);
             }
         }
     }
@@ -675,12 +831,13 @@ public class GeckoLibCompat {
                                        Matrix4f bonePoseState, Matrix3f boneNormalState, VertexConsumer buffer,
                                        int packedLight, int packedOverlay,
                                        float red, float green, float blue, float alpha,
-                                       GeoCube cube, GeoQuad quad) {
+                                       GeoCube cube, GeoQuad quad,
+                                       DynamicLimbOffsets offsets) {
 
-        Vector3f bentPos0 = transformVertex(rawPos0, cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb, transform, transformMatrix, bendable);
-        Vector3f bentPos1 = transformVertex(rawPos1, cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb, transform, transformMatrix, bendable);
-        Vector3f bentPos2 = transformVertex(rawPos2, cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb, transform, transformMatrix, bendable);
-        Vector3f bentPos3 = transformVertex(rawPos3, cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb, transform, transformMatrix, bendable);
+        Vector3f bentPos0 = transformVertex(rawPos0, cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb, transform, transformMatrix, bendable, offsets);
+        Vector3f bentPos1 = transformVertex(rawPos1, cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb, transform, transformMatrix, bendable, offsets);
+        Vector3f bentPos2 = transformVertex(rawPos2, cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb, transform, transformMatrix, bendable, offsets);
+        Vector3f bentPos3 = transformVertex(rawPos3, cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb, transform, transformMatrix, bendable, offsets);
 
         // Compute normal from bent vertices
         Vector3f vA = new Vector3f(bentPos1).sub(bentPos0);
@@ -712,7 +869,8 @@ public class GeckoLibCompat {
                                             GeoBone bone, GeoBone top, LimbType limb,
                                             Consumer<IPosWithOrigin> transform,
                                             Matrix4f transformMatrix,
-                                            BendableCuboid bendable) {
+                                            BendableCuboid bendable,
+                                            DynamicLimbOffsets offsets) {
         // Rotate vertex around cube pivot
         Vector3f inCube = new Vector3f(rawPos.x - cubePivotX, rawPos.y - cubePivotY, rawPos.z - cubePivotZ);
         inCube.rotate(qCube);
@@ -735,6 +893,16 @@ public class GeckoLibCompat {
         float vanillaX = vanillaWorldX - limb.vanillaPivotX;
         float vanillaY = vanillaWorldY - limb.vanillaPivotY;
         float vanillaZ = vanillaWorldZ - limb.vanillaPivotZ;
+
+        // For slim arm sleeves on Steve (width < 4.3px), micro-expand by 6% around arm center to prevent skin clipping/z-fighting
+        if (offsets != null && offsets.isSlim && (limb == LimbType.RIGHT_ARM || limb == LimbType.LEFT_ARM)) {
+            if (limb == LimbType.RIGHT_ARM) {
+                vanillaX = -1.0f + (vanillaX - (-1.0f)) * 1.06f;
+            } else {
+                vanillaX = 1.0f + (vanillaX - 1.0f) * 1.06f;
+            }
+            vanillaZ = vanillaZ * 1.06f;
+        }
 
         // Apply bendy deformation
         RememberingPos pos = new RememberingPos(new Vector3f(vanillaX, vanillaY, vanillaZ));
