@@ -175,7 +175,8 @@ public class CustomModelPartCompat {
     }
 
     public static final DynamicLimbOffsets ZERO_OFFSETS = new DynamicLimbOffsets(0.0f, 0.0f);
-    private static final Map<ModelPart, DynamicLimbOffsets> MODEL_PART_OFFSETS_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    // Weak keys: MCreator armors build new ModelParts every frame, a strong map would grow forever
+    private static final Map<ModelPart, DynamicLimbOffsets> MODEL_PART_OFFSETS_CACHE = new java.util.WeakHashMap<>();
 
     public static DynamicLimbOffsets getDynamicOffsets(ModelPart rootPart, LimbType limb) {
         if (rootPart == null || limb == null) {
@@ -283,7 +284,8 @@ public class CustomModelPartCompat {
     public static void renderBendableModelPart(ModelPart rootPart, MatrixStack matrices, VertexConsumer buffer,
                                                int light, int overlay, float red, float green, float blue, float alpha,
                                                LimbType limb, BendableCuboid bendable) {
-        if (!rootPart.visible || (rootPart.isEmpty())) {
+        // Not isEmpty(): it only checks the part's own cubes, and Blockbench armors keep theirs in child parts
+        if (!rootPart.visible) {
             return;
         }
 

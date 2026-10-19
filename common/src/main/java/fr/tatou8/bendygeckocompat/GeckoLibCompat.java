@@ -486,7 +486,7 @@ public class GeckoLibCompat {
     }
 
     public static final DynamicLimbOffsets ZERO_OFFSETS = new DynamicLimbOffsets(0.0f, 0.0f, false);
-    private static final Map<GeoBone, DynamicLimbOffsets> GECKO_OFFSETS_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<GeoBone, DynamicLimbOffsets> GECKO_OFFSETS_CACHE = new java.util.WeakHashMap<>(); // weak: bones are rebuilt on resource reload
 
     public static DynamicLimbOffsets getDynamicOffsets(GeoArmorRenderer<?> renderer, GeoBone top, LimbType limb) {
         GeoBone targetBone = top;
