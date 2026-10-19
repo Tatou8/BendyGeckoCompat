@@ -23,6 +23,13 @@ subprojects {
             }
         }
         maven {
+            name = "CurseMaven"
+            url = "https://cursemaven.com"
+            content {
+                includeGroup "curse.maven"
+            }
+        }
+        maven {
             name = "GeckoLib"
             url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/"
             content {
@@ -34,6 +41,7 @@ subprojects {
             name = "KosmX"
             url = "https://maven.kosmx.dev/"
         }
+        mavenCentral()
     }
 
     dependencies {
@@ -72,15 +80,3 @@ allprojects {
         withSourcesJar()
     }
 }
-
-project.ext.keys = new Properties()
-ext.ENV = System.getenv()
-ext.keysExists = ENV.MAVEN_PASS != null
-if (keysExists) {
-    project.ext.keys.kosmx_maven = ENV.MAVEN_PASS
-    project.ext.keys.maven_user = ENV.MAVEN_USER
-} else {
-    project.ext.keys.kosmx_maven = "V2h5IGRpZCB5b3UgZGVjb2RlIGl0PyAg"
-    project.ext.keys.maven_user = "username"
-}
-

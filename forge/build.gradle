@@ -32,7 +32,7 @@ dependencies {
     shadowCommon(project(path: ":common", configuration: "transformProductionForge")) { transitive = false }
 
     modCompileOnly modLocalRuntime("io.github.kosmx.bendy-lib:bendy-lib-forge:4.0.0")
-    modCompileOnly modLocalRuntime("software.bernie.geckolib:geckolib-forge-1.20.1:4.4.4")
+    modCompileOnly modLocalRuntime("curse.maven:geckolib-388172:6333474")
     forgeRuntimeLibrary "com.eliotlash.mclib:mclib:20"
     implementation "com.eliotlash.mclib:mclib:20"
 
@@ -94,17 +94,7 @@ publishing {
 
     // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
     repositories {
-        if (System.getenv("MAVEN_PASS") != null) {
-            maven {
-                url = 'https://maven.kosmx.dev/'
-                credentials {
-                    username = project.keys.maven_user
-                    password = project.keys.kosmx_maven
-                }
-            }
-        } else {
-            mavenLocal()
-        }
+        mavenLocal()
 
 
         if(System.getenv("GITHUB_ACTOR") != null) {

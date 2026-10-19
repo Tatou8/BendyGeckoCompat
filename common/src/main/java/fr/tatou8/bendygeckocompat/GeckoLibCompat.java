@@ -34,7 +34,7 @@ import java.util.function.Consumer;
 
 public class GeckoLibCompat {
 
-    public static boolean DEBUG = false;
+    public static boolean DEBUG = Boolean.getBoolean("bendygeckocompat.debug"); // enable with -Dbendygeckocompat.debug=true
     private static Logger LOGGER = null;
     private static long lastDebugLogTime = 0;
     private static long loggingActiveUntil = 0;
@@ -164,7 +164,6 @@ public class GeckoLibCompat {
         if (LOGGER != null) {
             LOGGER.info(message);
         }
-        System.out.println(message);
     }
 
     public static boolean isLoggingActive() {
@@ -576,13 +575,6 @@ public class GeckoLibCompat {
                 top.getParent().setPivotX(5.0f);
             }
 
-            // Normal right arm center in GeckoLib space is +6.0f (X in [4.0, 8.0]).
-            // Only add excess if the sleeve is positioned further outward than 6.0f
-            if (centerX > 6.05f) {
-                float centerExcess = centerX - 6.0f;
-                lateral += centerExcess;
-            }
-
             if (Math.abs(centerZ) > 0.25f) {
                 forward = centerZ;
             }
@@ -593,13 +585,6 @@ public class GeckoLibCompat {
             }
             if (top.getParent() != null && Math.abs(top.getParent().getPivotX() - (-5.0f)) > 0.01f) {
                 top.getParent().setPivotX(-5.0f);
-            }
-
-            // Normal left arm center in GeckoLib space is -6.0f (X in [-8.0, -4.0]).
-            // Only add excess if the sleeve is positioned further outward than -6.0f
-            if (centerX < -6.05f) {
-                float centerExcess = (-6.0f) - centerX;
-                lateral += centerExcess;
             }
 
             if (Math.abs(centerZ) > 0.25f) {

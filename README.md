@@ -5,7 +5,7 @@ Minecraft compatibility addon bringing complete bending support to **GeckoLib 3D
 ## Features
 - Dynamic real-time mesh deformation and bending for GeckoLib armor cubes matching player animations.
 - Full support for arms, legs, torso, and boots.
-- Compatible with Minecraft 1.19.4, 1.20, and 1.20.1 on both **Fabric** and **Forge**.
+- Compatible with Minecraft 1.20.1 on both **Fabric** and **Forge**.
 
 ## Dependencies
 - **[bendy-lib](https://github.com/KosmX/bendy-lib)**

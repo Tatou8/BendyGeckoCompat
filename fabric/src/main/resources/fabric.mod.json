@@ -27,7 +27,7 @@
   ],
   "depends": {
     "fabricloader": ">=0.14.14",
-    "minecraft": ">=1.19.4 <=1.20.4",
+    "minecraft": "1.20.1",
     "bendy-lib": ">=4.0.0",
     "geckolib": ">=4.0.0"
   },
@@ -36,4 +36,4 @@
       "badges": ["library"]
     }
   }
-}
+}
