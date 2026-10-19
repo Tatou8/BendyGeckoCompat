@@ -44,6 +44,23 @@ dependencies {
     modLocalRuntime "maven.modrinth:dungeons-and-combat:1.2.2"
     modLocalRuntime "maven.modrinth:survival-instinct:1.0.2"
     modLocalRuntime "maven.modrinth:arc-raiders:1.1.0"
+
+    // Optional local test mod: drop the jar in forge/lib/ (git-ignored); skipped when absent
+    def originJar = file("lib/Origin-1.20.1-1.9.6.jar")
+    if (originJar.exists()) {
+        modLocalRuntime files(originJar)
+        // Origin needs Walkers. In this yarn dev env its mob-AI mixin crashes (NoSuchFieldError f_26135_): test with doMobSpawning off
+        modLocalRuntime "curse.maven:woodwalkers-868922:7776200"
+        modLocalRuntime "maven.modrinth:crafted-core:1.20.1-forge-5.8.2"
+        modLocalRuntime "curse.maven:scholar-961802:8261723"
+        modLocalRuntime "curse.maven:sophisticated-backpacks-422301:6246607"
+        modLocalRuntime "curse.maven:parcool-482378:6189397"
+        modLocalRuntime "curse.maven:sophisticated-core-618298:6266807"
+        modLocalRuntime "curse.maven:pehkui-319596:5393101"
+        modLocalRuntime "curse.maven:cloth-config-forge-348521:5729105"
+        forgeRuntimeLibrary "io.github.llamalad7:mixinextras-common:0.4.1"
+        modLocalRuntime "io.github.llamalad7:mixinextras-forge:0.4.1"
+    }
 }
 
 processResources {

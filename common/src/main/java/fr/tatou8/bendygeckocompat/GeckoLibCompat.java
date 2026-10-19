@@ -765,7 +765,10 @@ public class GeckoLibCompat {
         float maxY = Math.max(py0, py3);
         float height = maxY - minY;
 
-        if (height <= 2.0f) {
+        float jointY = (limb == LimbType.RIGHT_ARM || limb == LimbType.LEFT_ARM) ? 4.0f : 6.0f;
+        // A small cube straddling the elbow/knee must still be split there, or its corners bend apart
+        boolean crossesJoint = limb != LimbType.BODY && minY < jointY && maxY > jointY;
+        if (height <= 2.0f && !crossesJoint) {
             intervals.add(new float[]{0.0f, 1.0f});
             return intervals;
         }
@@ -778,8 +781,7 @@ public class GeckoLibCompat {
             return intervals;
         }
 
-        float jointY = (limb == LimbType.RIGHT_ARM || limb == LimbType.LEFT_ARM) ? 4.0f : 6.0f;
-        if (minY < jointY && maxY > jointY) {
+        if (crossesJoint) {
             float tJoint = Math.abs(py3 - py0) > 0.001f ? (jointY - py0) / (py3 - py0) : 0.5f;
             tJoint = Math.max(0.05f, Math.min(0.95f, tJoint));
             float eps = 0.0002f;

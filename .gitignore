@@ -20,3 +20,4 @@ classes/
 .architectury-transformer/
 *.mp4
 */run/
+forge/lib/
