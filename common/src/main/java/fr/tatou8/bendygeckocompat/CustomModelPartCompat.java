@@ -25,7 +25,6 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 public class CustomModelPartCompat {
@@ -122,26 +121,37 @@ public class CustomModelPartCompat {
             ctx.registerLimb(biped.body, LimbType.BODY);
         }
 
-        // 2. Reflectively inspect all declared and inherited fields for custom ModelPart fields
-        Class<?> clazz = armorModel.getClass();
-        while (clazz != null && clazz != Model.class && clazz != Object.class) {
-            for (Field field : clazz.getDeclaredFields()) {
-                if (ModelPart.class.isAssignableFrom(field.getType())) {
+        // 2. Custom ModelPart fields whose name matches a limb (field list resolved once per model class)
+        for (LimbField limbField : LIMB_FIELDS.get(armorModel.getClass())) {
+            try {
+                ModelPart part = (ModelPart) limbField.field().get(armorModel);
+                if (part != null) {
+                    ctx.registerLimb(part, limbField.limb());
+                }
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    private record LimbField(Field field, LimbType limb) {}
+
+    // Scanning declared fields with reflection on every armor piece every frame was a hot spot
+    private static final ClassValue<List<LimbField>> LIMB_FIELDS = new ClassValue<>() {
+        @Override
+        protected List<LimbField> computeValue(Class<?> type) {
+            List<LimbField> fields = new ArrayList<>();
+            for (Class<?> clazz = type; clazz != null && clazz != Model.class && clazz != Object.class; clazz = clazz.getSuperclass()) {
+                for (Field field : clazz.getDeclaredFields()) {
+                    LimbType limb = matchLimbByName(field.getName());
+                    if (limb == null || !ModelPart.class.isAssignableFrom(field.getType())) continue;
                     try {
                         field.setAccessible(true);
-                        ModelPart part = (ModelPart) field.get(armorModel);
-                        if (part != null) {
-                            LimbType limb = matchLimbByName(field.getName());
-                            if (limb != null) {
-                                ctx.registerLimb(part, limb);
-                            }
-                        }
+                        fields.add(new LimbField(field, limb));
                     } catch (Throwable ignored) {}
                 }
             }
-            clazz = clazz.getSuperclass();
+            return List.copyOf(fields);
         }
-    }
+    };
 
     public static LimbType matchLimbByName(String rawName) {
         if (rawName == null) return null;
@@ -175,12 +185,7 @@ public class CustomModelPartCompat {
             return;
         }
 
-        AtomicReference<Consumer<IPosWithOrigin>> transformRef = new AtomicReference<>();
-        Matrix4f transformMatrix = bendable.applyBend(bendable.getBendAxis(), bendable.getBend(), transformRef::set);
-        if (transformMatrix == null) {
-            transformMatrix = new Matrix4f();
-        }
-        Consumer<IPosWithOrigin> transform = transformRef.get();
+        Consumer<IPosWithOrigin> transform = GeckoLibCompat.bendTransform(bendable);
         if (transform == null) {
             return;
         }

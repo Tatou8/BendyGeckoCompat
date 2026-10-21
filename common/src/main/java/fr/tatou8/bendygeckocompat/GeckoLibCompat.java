@@ -65,7 +65,7 @@ public class GeckoLibCompat {
             if (isSpecificLimbBone(renderer, current)) {
                 return current;
             }
-            if (match == null && isMatchingLimbName(current.getName())) {
+            if (match == null && isMatchingLimbName(current)) {
                 match = current;
             }
             current = current.getParent();
@@ -83,8 +83,7 @@ public class GeckoLibCompat {
                 || bone == renderer.getBodyBone();
     }
 
-    private static boolean isMatchingLimbName(String name) {
-        if (name == null) return false;
+    private static boolean isMatchingLimbName(GeoBone name) {
         if (isMatching(name, "armorrightarm") || isMatching(name, "armorleftarm")
                 || isMatching(name, "armorrightleg") || isMatching(name, "armorleftleg")
                 || isMatching(name, "armorrightboot") || isMatching(name, "armorleftboot")
@@ -330,16 +329,16 @@ public class GeckoLibCompat {
         if (renderer == null || bone == null) {
             return false;
         }
-        if (bone == renderer.getHeadBone() || isMatching(bone.getName(), "head")) {
+        if (bone == renderer.getHeadBone() || isMatching(bone, "head")) {
             return true;
         }
-        if (bone == renderer.getBodyBone() || isMatching(bone.getName(), "body") || isMatching(bone.getName(), "torso") || isMatching(bone.getName(), "chest")) {
+        if (bone == renderer.getBodyBone() || isMatching(bone, "body") || isMatching(bone, "torso") || isMatching(bone, "chest")) {
             return true;
         }
-        if (bone == renderer.getRightArmBone() || isMatching(bone.getName(), "rightarm")) {
+        if (bone == renderer.getRightArmBone() || isMatching(bone, "rightarm")) {
             return true;
         }
-        if (bone == renderer.getLeftArmBone() || isMatching(bone.getName(), "leftarm")) {
+        if (bone == renderer.getLeftArmBone() || isMatching(bone, "leftarm")) {
             return true;
         }
         return false;
@@ -375,7 +374,7 @@ public class GeckoLibCompat {
             if (current == renderer.getRightBootBone() || current == renderer.getLeftBootBone()) {
                 return true;
             }
-            if (isMatching(current.getName(), "boot") || isMatching(current.getName(), "shoe") || isMatching(current.getName(), "toe")) {
+            if (isMatching(current, "boot") || isMatching(current, "shoe") || isMatching(current, "toe")) {
                 return true;
             }
             current = current.getParent();
@@ -411,19 +410,19 @@ public class GeckoLibCompat {
 
         GeoBone current = bone;
         while (current != null) {
-            if (current == renderer.getRightArmBone() || isMatching(current.getName(), "rightarm")) {
+            if (current == renderer.getRightArmBone() || isMatching(current, "rightarm")) {
                 return LimbType.RIGHT_ARM;
             }
-            if (current == renderer.getLeftArmBone() || isMatching(current.getName(), "leftarm")) {
+            if (current == renderer.getLeftArmBone() || isMatching(current, "leftarm")) {
                 return LimbType.LEFT_ARM;
             }
-            if (current == renderer.getRightLegBone() || current == renderer.getRightBootBone() || isMatching(current.getName(), "rightleg") || isMatching(current.getName(), "rightboot") || isMatching(current.getName(), "rightshoe")) {
+            if (current == renderer.getRightLegBone() || current == renderer.getRightBootBone() || isMatching(current, "rightleg") || isMatching(current, "rightboot") || isMatching(current, "rightshoe")) {
                 return LimbType.RIGHT_LEG;
             }
-            if (current == renderer.getLeftLegBone() || current == renderer.getLeftBootBone() || isMatching(current.getName(), "leftleg") || isMatching(current.getName(), "leftboot") || isMatching(current.getName(), "leftshoe")) {
+            if (current == renderer.getLeftLegBone() || current == renderer.getLeftBootBone() || isMatching(current, "leftleg") || isMatching(current, "leftboot") || isMatching(current, "leftshoe")) {
                 return LimbType.LEFT_LEG;
             }
-            if (current == renderer.getBodyBone() || isMatching(current.getName(), "body") || isMatching(current.getName(), "torso") || isMatching(current.getName(), "chest")) {
+            if (current == renderer.getBodyBone() || isMatching(current, "body") || isMatching(current, "torso") || isMatching(current, "chest")) {
                 return LimbType.BODY;
             }
             current = current.getParent();
@@ -445,14 +444,39 @@ public class GeckoLibCompat {
         };
     }
 
-    private static boolean isMatching(String name, String pattern) {
-        if (name == null) return false;
-        String clean = name.toLowerCase(Locale.ROOT).replace("_", "").replace(" ", "").replace("-", "");
-        return clean.contains(pattern);
+    // Bone names never change: normalise each once instead of on every check, every frame
+    private static final Map<GeoBone, String> CLEAN_NAMES = new java.util.WeakHashMap<>();
+
+    private static boolean isMatching(GeoBone bone, String pattern) {
+        return CLEAN_NAMES.computeIfAbsent(bone, b -> b.getName() == null ? ""
+                : b.getName().toLowerCase(Locale.ROOT).replace("_", "").replace(" ", "").replace("-", "")).contains(pattern);
     }
 
     public static boolean isBendableBone(GeoArmorRenderer<?> renderer, GeoBone bone, LimbType limb) {
         return renderer != null && bone != null && limb != null;
+    }
+
+    private record CachedBend(float axis, float bend, Consumer<IPosWithOrigin> transform) {}
+
+    private static final Map<BendableCuboid, CachedBend> BEND_CACHE = new java.util.WeakHashMap<>();
+
+    /**
+     * The bendy-lib point transform for the limb's current bend.
+     * applyBend() also re-bends the player's whole cuboid (about 10% of a frame when called per bone), so it only
+     * runs again when the bend actually changed.
+     */
+    public static Consumer<IPosWithOrigin> bendTransform(BendableCuboid bendable) {
+        CachedBend cached = BEND_CACHE.get(bendable);
+        if (cached != null && cached.axis() == bendable.getBendAxis() && cached.bend() == bendable.getBend()) {
+            return cached.transform();
+        }
+        AtomicReference<Consumer<IPosWithOrigin>> transformRef = new AtomicReference<>();
+        bendable.applyBend(bendable.getBendAxis(), bendable.getBend(), transformRef::set);
+        Consumer<IPosWithOrigin> transform = transformRef.get();
+        if (transform != null) {
+            BEND_CACHE.put(bendable, new CachedBend(bendable.getBendAxis(), bendable.getBend(), transform));
+        }
+        return transform;
     }
 
     /**
@@ -675,13 +699,7 @@ public class GeckoLibCompat {
             return;
         }
 
-        // Obtain bend transformation function and matrix from BendableCuboid
-        AtomicReference<Consumer<IPosWithOrigin>> transformRef = new AtomicReference<>();
-        Matrix4f transformMatrix = bendable.applyBend(bendable.getBendAxis(), bendable.getBend(), transformRef::set);
-        if (transformMatrix == null) {
-            transformMatrix = new Matrix4f();
-        }
-        Consumer<IPosWithOrigin> transform = transformRef.get();
+        Consumer<IPosWithOrigin> transform = bendTransform(bendable);
         if (transform == null) {
             return;
         }
@@ -697,12 +715,30 @@ public class GeckoLibCompat {
                 ? new Matrix3f(matrices.peek().getNormalMatrix())
                 : getTopLimbNormalMatrix(limb, matrices.peek().getNormalMatrix());
 
+        // The child->top bone chain is the same for every vertex of this bone: build it once per frame
+        Matrix4f boneToTop = childToTopMatrix(bone, top);
         for (GeoCube cube : bone.getCubes()) {
-            renderBendableCube(cube, bone, top, limb, transform, transformMatrix, bendable, bonePoseState, boneNormalState, buffer, packedLight, packedOverlay, red, green, blue, alpha, offsets);
+            renderBendableCube(cube, boneToTop, limb, transform, bendable, bonePoseState, boneNormalState, buffer, packedLight, packedOverlay, red, green, blue, alpha, offsets);
         }
     }
 
-    private static void renderBendableCube(GeoCube cube, GeoBone bone, GeoBone top, LimbType limb, Consumer<IPosWithOrigin> transform, Matrix4f transformMatrix, BendableCuboid bendable,
+    /** Matrix form of {@link #transformChildToTop}: each bone's pivot, scale, rotation and position, from child up to top. */
+    static Matrix4f childToTopMatrix(GeoBone child, GeoBone top) {
+        Matrix4f m = new Matrix4f();
+        if (child == null || top == null) return m;
+        for (GeoBone b = child; b != null && b != top; b = b.getParent()) {
+            float pivX = b.getPivotX() / 16.0f, pivY = b.getPivotY() / 16.0f, pivZ = b.getPivotZ() / 16.0f;
+            new Matrix4f()
+                    .translate(pivX - b.getPosX() / 16.0f, pivY + b.getPosY() / 16.0f, pivZ + b.getPosZ() / 16.0f)
+                    .rotate(new Quaternionf().rotationZYX(b.getRotZ(), b.getRotY(), b.getRotX()))
+                    .scale(b.getScaleX(), b.getScaleY(), b.getScaleZ())
+                    .translate(-pivX, -pivY, -pivZ)
+                    .mul(m, m); // m = boneTransform * m
+        }
+        return m;
+    }
+
+    private static void renderBendableCube(GeoCube cube, Matrix4f boneToTop, LimbType limb, Consumer<IPosWithOrigin> transform, BendableCuboid bendable,
                                            Matrix4f bonePoseState, Matrix3f boneNormalState, VertexConsumer buffer,
                                            int packedLight, int packedOverlay, float red, float green, float blue, float alpha,
                                            DynamicLimbOffsets offsets) {
@@ -715,6 +751,12 @@ public class GeckoLibCompat {
         float cubePivotY = (float) (cube.pivot().y / 16.0);
         float cubePivotZ = (float) (cube.pivot().z / 16.0);
 
+        // Cube rotation + bone chain is affine: corners go to top space once, slices are interpolated there
+        Matrix4f cubeToTop = new Matrix4f(boneToTop)
+                .translate(cubePivotX, cubePivotY, cubePivotZ)
+                .rotate(qCube)
+                .translate(-cubePivotX, -cubePivotY, -cubePivotZ);
+
         if (DEBUG && isLoggingActive()) {
             log("[BendyDebug]    renderBendableCube: size=" + cube.size() + ", pivot=" + cube.pivot());
         }
@@ -725,36 +767,41 @@ public class GeckoLibCompat {
             }
 
             GeoVertex[] v = quad.vertices();
+            Vector3f p0 = cubeToTop.transformPosition(new Vector3f(v[0].position()));
+            Vector3f p1 = cubeToTop.transformPosition(new Vector3f(v[1].position()));
+            Vector3f p2 = cubeToTop.transformPosition(new Vector3f(v[2].position()));
+            Vector3f p3 = cubeToTop.transformPosition(new Vector3f(v[3].position()));
 
-            float py0 = toVanillaPixelY(v[0].position(), cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb);
-            float py3 = toVanillaPixelY(v[3].position(), cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb);
+            List<float[]> intervals = getSliceIntervals(toVanillaPixelY(p0.y, limb), toVanillaPixelY(p3.y, limb), limb);
 
-            List<float[]> intervals = getSliceIntervals(py0, py3, limb);
+            // Neighbouring slices share an edge: bend each edge point once
+            float prevT = Float.NaN;
+            Vector3f prevEdge0 = null, prevEdge1 = null;
             for (float[] interval : intervals) {
                 float t0 = interval[0];
                 float t1 = interval[1];
 
-                // Interpolate edge 0 (v0 to v3) and edge 1 (v1 to v2)
-                Vector3f pos0 = lerpVec(v[0].position(), v[3].position(), t0);
-                float u0 = lerp(v[0].texU(), v[3].texU(), t0);
-                float texV0 = lerp(v[0].texV(), v[3].texV(), t0);
+                Vector3f bent0, bent1;
+                if (t0 == prevT) {
+                    bent0 = prevEdge0;
+                    bent1 = prevEdge1;
+                } else {
+                    bent0 = bendPoint(lerpVec(p0, p3, t0), limb, transform, bendable, offsets);
+                    bent1 = bendPoint(lerpVec(p1, p2, t0), limb, transform, bendable, offsets);
+                }
+                Vector3f bent2 = bendPoint(lerpVec(p1, p2, t1), limb, transform, bendable, offsets);
+                Vector3f bent3 = bendPoint(lerpVec(p0, p3, t1), limb, transform, bendable, offsets);
 
-                Vector3f pos1 = lerpVec(v[1].position(), v[2].position(), t0);
-                float u1 = lerp(v[1].texU(), v[2].texU(), t0);
-                float texV1 = lerp(v[1].texV(), v[2].texV(), t0);
+                // Edge 0 is v0 -> v3, edge 1 is v1 -> v2
+                renderBentQuad(bent0, lerp(v[0].texU(), v[3].texU(), t0), lerp(v[0].texV(), v[3].texV(), t0),
+                        bent1, lerp(v[1].texU(), v[2].texU(), t0), lerp(v[1].texV(), v[2].texV(), t0),
+                        bent2, lerp(v[1].texU(), v[2].texU(), t1), lerp(v[1].texV(), v[2].texV(), t1),
+                        bent3, lerp(v[0].texU(), v[3].texU(), t1), lerp(v[0].texV(), v[3].texV(), t1),
+                        bonePoseState, boneNormalState, buffer, packedLight, packedOverlay, red, green, blue, alpha, cube, quad);
 
-                Vector3f pos2 = lerpVec(v[1].position(), v[2].position(), t1);
-                float u2 = lerp(v[1].texU(), v[2].texU(), t1);
-                float texV2 = lerp(v[1].texV(), v[2].texV(), t1);
-
-                Vector3f pos3 = lerpVec(v[0].position(), v[3].position(), t1);
-                float u3 = lerp(v[0].texU(), v[3].texU(), t1);
-                float texV3 = lerp(v[0].texV(), v[3].texV(), t1);
-
-                renderBentQuad(pos0, u0, texV0, pos1, u1, texV1, pos2, u2, texV2, pos3, u3, texV3,
-                        cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb,
-                        transform, transformMatrix, bendable, bonePoseState, boneNormalState, buffer, packedLight, packedOverlay,
-                        red, green, blue, alpha, cube, quad, offsets);
+                prevT = t1;
+                prevEdge0 = bent3;
+                prevEdge1 = bent2;
             }
         }
     }
@@ -809,23 +856,14 @@ public class GeckoLibCompat {
         return intervals;
     }
 
-    private static void renderBentQuad(Vector3f rawPos0, float u0, float v0,
-                                       Vector3f rawPos1, float u1, float v1,
-                                       Vector3f rawPos2, float u2, float v2,
-                                       Vector3f rawPos3, float u3, float v3,
-                                       float cubePivotX, float cubePivotY, float cubePivotZ, Quaternionf qCube,
-                                       GeoBone bone, GeoBone top, LimbType limb, Consumer<IPosWithOrigin> transform, Matrix4f transformMatrix, BendableCuboid bendable,
+    private static void renderBentQuad(Vector3f bentPos0, float u0, float v0,
+                                       Vector3f bentPos1, float u1, float v1,
+                                       Vector3f bentPos2, float u2, float v2,
+                                       Vector3f bentPos3, float u3, float v3,
                                        Matrix4f bonePoseState, Matrix3f boneNormalState, VertexConsumer buffer,
                                        int packedLight, int packedOverlay,
                                        float red, float green, float blue, float alpha,
-                                       GeoCube cube, GeoQuad quad,
-                                       DynamicLimbOffsets offsets) {
-
-        Vector3f bentPos0 = transformVertex(rawPos0, cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb, transform, transformMatrix, bendable, offsets);
-        Vector3f bentPos1 = transformVertex(rawPos1, cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb, transform, transformMatrix, bendable, offsets);
-        Vector3f bentPos2 = transformVertex(rawPos2, cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb, transform, transformMatrix, bendable, offsets);
-        Vector3f bentPos3 = transformVertex(rawPos3, cubePivotX, cubePivotY, cubePivotZ, qCube, bone, top, limb, transform, transformMatrix, bendable, offsets);
-
+                                       GeoCube cube, GeoQuad quad) {
         // Compute normal from bent vertices
         Vector3f vA = new Vector3f(bentPos1).sub(bentPos0);
         Vector3f vB = new Vector3f(bentPos3).sub(bentPos0);
@@ -851,19 +889,9 @@ public class GeckoLibCompat {
         buffer.vertex(world3.x, world3.y, world3.z, red, green, blue, alpha, u3, v3, packedOverlay, packedLight, worldNormal.x, worldNormal.y, worldNormal.z);
     }
 
-    private static Vector3f transformVertex(Vector3f rawPos,
-                                            float cubePivotX, float cubePivotY, float cubePivotZ, Quaternionf qCube,
-                                            GeoBone bone, GeoBone top, LimbType limb,
-                                            Consumer<IPosWithOrigin> transform,
-                                            Matrix4f transformMatrix,
-                                            BendableCuboid bendable,
-                                            DynamicLimbOffsets offsets) {
-        // Rotate vertex around cube pivot
-        Vector3f inCube = new Vector3f(rawPos.x - cubePivotX, rawPos.y - cubePivotY, rawPos.z - cubePivotZ);
-        inCube.rotate(qCube);
-        inCube.add(cubePivotX, cubePivotY, cubePivotZ);
-
-        Vector3f inTop = transformChildToTop(inCube, bone, top);
+    /** Applies the bendy-lib deformation to a point already in top-bone space. */
+    private static Vector3f bendPoint(Vector3f inTop, LimbType limb, Consumer<IPosWithOrigin> transform,
+                                      BendableCuboid bendable, DynamicLimbOffsets offsets) {
         float rotatedX = inTop.x;
         float rotatedY = inTop.y;
         float rotatedZ = inTop.z;
@@ -934,18 +962,11 @@ public class GeckoLibCompat {
         return new Vector3f(fromPivot.x, fromPivot.y + pivotY, fromPivot.z);
     }
 
-    private static float toVanillaPixelY(Vector3f rawPos, float cubePivotX, float cubePivotY, float cubePivotZ, Quaternionf qCube, GeoBone bone, GeoBone top, LimbType limb) {
-        Vector3f inCube = new Vector3f(rawPos.x - cubePivotX, rawPos.y - cubePivotY, rawPos.z - cubePivotZ);
-        inCube.rotate(qCube);
-        inCube.add(cubePivotX, cubePivotY, cubePivotZ);
-
-        Vector3f inTop = transformChildToTop(inCube, bone, top);
-        float rotatedY = inTop.y;
+    private static float toVanillaPixelY(float topY, LimbType limb) {
         if (limb == LimbType.BODY) {
-            return rotatedY * 16.0f;
+            return topY * 16.0f;
         }
-        float vanillaWorldY = 24.0f - (rotatedY * 16.0f);
-        return vanillaWorldY - limb.vanillaPivotY;
+        return 24.0f - topY * 16.0f - limb.vanillaPivotY;
     }
 
     private static Vector3f lerpVec(Vector3f a, Vector3f b, float t) {

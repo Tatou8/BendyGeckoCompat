@@ -44,6 +44,7 @@ dependencies {
     modLocalRuntime "maven.modrinth:dungeons-and-combat:1.2.2"
     modLocalRuntime "maven.modrinth:survival-instinct:1.0.2"
     modLocalRuntime "maven.modrinth:arc-raiders:1.1.0"
+    modLocalRuntime "curse.maven:spark-361579:4738952"
 
     // Optional local test mod: drop the jar in forge/lib/ (git-ignored); skipped when absent
     def originJar = file("lib/Origin-1.20.1-1.9.6.jar")
