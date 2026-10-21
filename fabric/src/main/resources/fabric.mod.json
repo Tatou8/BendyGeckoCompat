@@ -15,7 +15,7 @@
     "homepage": "https://github.com/Tatou8/BendyGeckoCompat",
     "sources": "https://github.com/Tatou8/BendyGeckoCompat.git"
   },
-  "license": "CC-BY-4.0 License",
+  "license": "MIT",
   "environment": "client",
   "entrypoints": {
     "client": [
